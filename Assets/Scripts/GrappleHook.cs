@@ -4,167 +4,168 @@ using UnityEngine;
 public class GrappleHook : MonoBehaviour
 {
     [Header("Grapple Settings")]
-    public LineRenderer lineRenderer;         // Assigned via the GrappleOrigin GameObject
-    public Transform hookOrigin;              // The origin point for the grapple (child of the Player)
-    public float maxDistance = 20f;           // Maximum grapple distance
-    public LayerMask grappleableLayer;        // Only these layers can be grappled
+    public LineRenderer lineRenderer;
+    public Transform hookOrigin;
+    public float maxDistance = 20f;
+    public LayerMask grappleableLayer;
+    public float hookTravelSpeed = 30f;
 
     [Header("Grapple Control")]
-    public float horizontalControlForce = 10f; // Force applied for left/right input while grappled
-    public bool useSpringJoint = true;        // Toggle to switch between SpringJoint2D and DistanceJoint2D
+    public float pullSpeed = 25f;
+    public float minPullDistance = 0.5f;
+    public float swingForce = 15f;
+    public float swingDamping = 0.95f;
+    public float maxSwingVelocity = 20f;
 
-    // Spring Joint Parameters (only relevant if useSpringJoint == true)
-    [Range(0f, 10f)]
-    public float springFrequency = 2f;        // Higher = stiffer spring
-    [Range(0f, 1f)]
-    public float springDampingRatio = 0.2f;   // Higher = more damping
-    public float springDistanceBuffer = 0.5f; // How "relaxed" the rope is at the start
+    [Header("Visuals & Effects")]
+    public GameObject hookPrefab;
+    public float hookSize = 0.2f;
 
     private Vector2 grapplePoint;
-    private Joint2D activeJoint;              // Could be a SpringJoint2D or DistanceJoint2D
     private Transform playerTransform;
     private Rigidbody2D rb;
     private bool isGrappled = false;
+    private bool isHookTraveling = false;
+    private Vector2 hookPosition;
+    private GameObject hookInstance;
+    private Vector2 pendulumPivot;
+    private Vector2 hookDirection;
+    private float hookTravelTime;
 
     void Start()
     {
-        // Assume hookOrigin is a child of the Player
         playerTransform = hookOrigin.parent;
         rb = playerTransform.GetComponent<Rigidbody2D>();
-
-        // Improve collision reliability and stability
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.freezeRotation = true;
 
-        // Ensure the LineRenderer is properly initialized
-        if (lineRenderer == null)
-            lineRenderer = GetComponent<LineRenderer>();
-
-        // By default, hide the rope
+        if (!lineRenderer) lineRenderer = GetComponent<LineRenderer>();
         lineRenderer.positionCount = 0;
     }
 
     void Update()
     {
-        // Right-click initiates grapple; release on button up
-        if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonDown(1) && !isGrappled && !isHookTraveling)
         {
-            StartGrapple();
+            FireGrapple();
         }
         if (Input.GetMouseButtonUp(1))
         {
             EndGrapple();
         }
 
-        // While grappled, apply horizontal control force
-        if (isGrappled && activeJoint != null)
+        if (isHookTraveling)
         {
-            float horizontalInput = Input.GetAxisRaw("Horizontal");
-            rb.AddForce(new Vector2(horizontalInput * horizontalControlForce, 0), ForceMode2D.Force);
+            UpdateHookTravel();
+        }
+        else if (isGrappled)
+        {
+            ApplySwingPhysics();
+            PullToGrapplePoint();
         }
     }
 
-    void StartGrapple()
+    void LateUpdate()
     {
-        // Convert mouse position to a world point and determine the direction
-        Vector2 targetPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        Vector2 direction = targetPos - (Vector2)hookOrigin.position;
+        if (isHookTraveling || isGrappled)
+        {
+            lineRenderer.positionCount = 2;
+            lineRenderer.SetPosition(0, hookOrigin.position);
+            lineRenderer.SetPosition(1, isHookTraveling ? hookPosition : grapplePoint);
+        }
+        else
+        {
+            lineRenderer.positionCount = 0;
+        }
 
-        // Initial raycast to find a grappleable surface
-        RaycastHit2D hit = Physics2D.Raycast(hookOrigin.position, direction, maxDistance, grappleableLayer);
+        if (hookInstance) hookInstance.transform.position = hookPosition;
+    }
+
+    void FireGrapple()
+    {
+        Vector2 targetPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        hookDirection = (targetPos - (Vector2)hookOrigin.position).normalized;
+
+        RaycastHit2D hit = Physics2D.Raycast(hookOrigin.position, hookDirection, maxDistance, grappleableLayer);
         if (hit.collider != null)
         {
+            // Check if there is a clear line of sight from the player to the grapple point
             Vector2 hitPoint = hit.point;
-
-            // --- Additional check: ensure no floor blocks the line of sight ---
-            // This second raycast checks from the player to the hit point to confirm nothing else
-            // (like a floor or an obstacle) is in between.
-            float distanceToHit = Vector2.Distance(playerTransform.position, hitPoint);
-            RaycastHit2D floorCheck = Physics2D.Raycast(
-                playerTransform.position,
-                hitPoint - (Vector2)playerTransform.position,
-                distanceToHit,
-                grappleableLayer
-            );
-
-            // If the second raycast hits the *same* collider, we have clear line of sight.
-            if (floorCheck.collider != null && floorCheck.collider == hit.collider)
+            if (Physics2D.Linecast(playerTransform.position, hitPoint, grappleableLayer).collider == hit.collider)
             {
                 grapplePoint = hitPoint;
-                CreateJoint();
-                // Enable the visual rope
-                lineRenderer.positionCount = 2;
-                isGrappled = true;
+                pendulumPivot = grapplePoint;
+                hookPosition = hookOrigin.position;
+                isHookTraveling = true;
+                hookTravelTime = Vector2.Distance(hookOrigin.position, grapplePoint) / hookTravelSpeed;
+
+                if (hookPrefab)
+                {
+                    hookInstance = Instantiate(hookPrefab, hookPosition, Quaternion.identity);
+                    hookInstance.transform.localScale = Vector3.one * hookSize;
+                }
             }
         }
     }
 
-    void CreateJoint()
+    void UpdateHookTravel()
     {
-        // Clean up any existing joint before creating a new one
-        if (activeJoint != null)
+        hookPosition = Vector2.Lerp(hookPosition, grapplePoint, Time.deltaTime / hookTravelTime);
+        if (Vector2.Distance(hookPosition, grapplePoint) < 0.2f)
         {
-            Destroy(activeJoint);
+            isHookTraveling = false;
+            isGrappled = true;
+            rb.velocity = Vector2.zero;
+
+            if (hookInstance) Destroy(hookInstance);
         }
+    }
 
-        float currentDistance = Vector2.Distance(playerTransform.position, grapplePoint);
+    void ApplySwingPhysics()
+    {
+        Vector2 toPivot = (Vector2)playerTransform.position - pendulumPivot;
+        float distanceToPivot = toPivot.magnitude;
+        Vector2 directionToPivot = toPivot.normalized;
 
-        if (useSpringJoint)
+        float horizontalInput = Input.GetAxisRaw("Horizontal");
+        Vector2 swingDirection = Vector2.Perpendicular(directionToPivot) * -horizontalInput;
+        rb.AddForce(swingDirection * swingForce, ForceMode2D.Force);
+
+        Vector2 gravityForce = -directionToPivot * (Physics2D.gravity.magnitude * 2f);
+        rb.AddForce(gravityForce, ForceMode2D.Force);
+
+        rb.velocity *= swingDamping;
+        rb.velocity = Vector2.ClampMagnitude(rb.velocity, maxSwingVelocity);
+    }
+
+    void PullToGrapplePoint()
+    {
+        float distanceToPoint = Vector2.Distance(playerTransform.position, grapplePoint);
+        if (distanceToPoint > minPullDistance)
         {
-            // Create a SpringJoint2D for more dynamic swinging
-            SpringJoint2D springJoint = playerTransform.gameObject.AddComponent<SpringJoint2D>();
-            springJoint.connectedAnchor = grapplePoint;
-
-            // The distance at which the spring is “at rest”
-            // Add a small buffer so you can move closer than initial distance
-            springJoint.distance = currentDistance - springDistanceBuffer;
-            if (springJoint.distance < 0f) springJoint.distance = 0f;
-
-            // Stiffness & damping of the spring
-            springJoint.frequency = springFrequency;
-            springJoint.dampingRatio = springDampingRatio;
-
-            // Allow collisions so rope can’t pass through colliders
-            springJoint.enableCollision = true;
-
-            activeJoint = springJoint;
+            Vector2 pullDirection = (grapplePoint - (Vector2)playerTransform.position).normalized;
+            rb.velocity = Vector2.Lerp(rb.velocity, pullDirection * pullSpeed, Time.deltaTime * 10f);
         }
         else
         {
-            // If you prefer the simpler DistanceJoint2D approach:
-            DistanceJoint2D distanceJoint = playerTransform.gameObject.AddComponent<DistanceJoint2D>();
-            distanceJoint.connectedAnchor = grapplePoint;
-            distanceJoint.autoConfigureDistance = false;
-
-            // Use maxDistanceOnly so the rope is only a maximum length;
-            // the player can still move closer (prevents “standing” on the rope).
-            distanceJoint.distance = currentDistance;
-            distanceJoint.maxDistanceOnly = true;
-            distanceJoint.enableCollision = true;
-
-            activeJoint = distanceJoint;
+            rb.velocity *= 0.8f;
         }
     }
 
     void EndGrapple()
     {
-        // Clean up the joint and visual rope when releasing the grapple
-        if (activeJoint != null)
-        {
-            Destroy(activeJoint);
-            activeJoint = null;
-        }
+        if (isHookTraveling && hookInstance) Destroy(hookInstance);
         lineRenderer.positionCount = 0;
         isGrappled = false;
+        isHookTraveling = false;
     }
 
-    void LateUpdate()
+    void OnDrawGizmos()
     {
-        // Update the rope line to draw from the hook origin to the grapple point
-        if (isGrappled && activeJoint != null)
+        if (isGrappled)
         {
-            lineRenderer.SetPosition(0, hookOrigin.position);
-            lineRenderer.SetPosition(1, grapplePoint);
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(grapplePoint, 0.1f);
         }
     }
 }
