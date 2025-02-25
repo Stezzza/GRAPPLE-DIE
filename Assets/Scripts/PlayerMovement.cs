@@ -4,8 +4,8 @@ using UnityEngine;
 [RequireComponent(typeof(Animator))]
 public class PlayerMovement : MonoBehaviour
 {
-    public float moveSpeed = 5f;
-    public float jumpForce = 10f;
+    public float moveSpeed = 2f;
+    public float jumpForce = 2f;
     private Rigidbody2D rb;
     private Animator animator;
 
@@ -23,6 +23,16 @@ public class PlayerMovement : MonoBehaviour
 
         float horizontal = Input.GetAxisRaw("Horizontal");
         rb.velocity = new Vector2(horizontal * moveSpeed, rb.velocity.y);
+
+        // Flip the sprite based on horizontal movement direction
+        if (horizontal > 0.01f) // Moving right
+        {
+            transform.localScale = new Vector3(1f, transform.localScale.y, transform.localScale.z);
+        }
+        else if (horizontal < -0.01f) // Moving left
+        {
+            transform.localScale = new Vector3(-1f, transform.localScale.y, transform.localScale.z);
+        }
 
         // Update Speed parameter (absolute value of horizontal velocity)
         animator.SetFloat("Speed", Mathf.Abs(rb.velocity.x));
