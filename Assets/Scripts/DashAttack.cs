@@ -22,6 +22,7 @@ public class DashAttack : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         mainCam = Camera.main;
+        animator = GetComponent<Animator>();
         dashTrail.emitting = false;
         dashTrail.time = 0.05f;
         dashTrail.startWidth = 0.1f;
@@ -34,15 +35,21 @@ public class DashAttack : MonoBehaviour
         {
             Vector2 mousePos = mainCam.ScreenToWorldPoint(Input.mousePosition);
             Vector2 dashDirection = (mousePos - (Vector2)transform.position).normalized;
+            HandleFacingDirection(dashDirection);
             StartCoroutine(PerformDash(dashDirection));
+        }
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            ResetDash();
         }
     }
 
-    private System.Collections.IEnumerator PerformDash(Vector2 direction)
+    private IEnumerator PerformDash(Vector2 direction)
     {
         canDash = false;
         dashTrail.emitting = true;
-        GetComponent<Animator>().SetTrigger("attack1");
+        animator.SetTrigger("attack1");
 
         float elapsedTime = 0f;
 
@@ -53,7 +60,7 @@ public class DashAttack : MonoBehaviour
             Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(transform.position, damageRadius, enemyLayer);
             foreach (Collider2D enemy in hitEnemies)
             {
-                //enemy.GetComponent<EnemyHealth>().TakeDamage(damageAmount);
+                // enemy.GetComponent<EnemyHealth>().TakeDamage(damageAmount);
             }
 
             elapsedTime += Time.deltaTime;
@@ -63,17 +70,20 @@ public class DashAttack : MonoBehaviour
         rb.velocity = Vector2.zero;
         dashTrail.emitting = false;
     }
-public void FinishAttackAnimation()
-{
-    animator.Play("Idle");
-}
 
-    public void ResetDash()
+    private void HandleFacingDirection(Vector2 direction)
     {
-        canDash = true;
+        Vector3 localScale = transform.localScale;
+
+        if (direction.x > 0)
+            localScale.x = Mathf.Abs(localScale.x);
+        else if (direction.x < 0)
+            localScale.x = -Mathf.Abs(localScale.x);
+
+        transform.localScale = localScale;
     }
 
-    void OnCollisionEnter2D(Collision2D collision)
+    private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.collider.CompareTag("Ground"))
         {
@@ -81,9 +91,14 @@ public void FinishAttackAnimation()
         }
     }
 
-    public void OnGrappleAttach()
+    public void FinishAttackAnimation()
     {
-        ResetDash();
+        animator.Play("Idle");
+    }
+
+    public void ResetDash()
+    {
+        canDash = true;
     }
 
     void OnDrawGizmosSelected()
