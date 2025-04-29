@@ -3,15 +3,17 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance;
+    public static GameManager Instance { get; private set; }
 
+    [Tooltip("Assign the End Game UI panel (or leave null if using a separate scene).")]
     public GameObject endGameScreen;
 
     private bool isPaused;
     public bool IsPaused => isPaused;
 
-    void Awake()
+    private void Awake()
     {
+        // Enforce singleton pattern
         if (Instance == null)
         {
             Instance = this;
@@ -23,35 +25,51 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void SetPause(bool value)
+    /// <summary>
+    /// Pause or unpause the game by setting timeScale.
+    /// </summary>
+    public void SetPause(bool pause)
     {
-        isPaused = value;
-        Time.timeScale = value ? 0f : 1f;
+        isPaused = pause;
+        Time.timeScale = pause ? 0f : 1f;
     }
 
+    /// <summary>
+    /// Reloads the current scene.
+    /// </summary>
     public void RestartLevel()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        var currentScene = SceneManager.GetActiveScene().name;
+        SceneManager.LoadScene(currentScene);
     }
 
+    /// <summary>
+    /// Invoked when the game is over.  
+    /// If using in-scene UI, enables the endGameScreen panel;  
+    /// otherwise, loads the EndGame scene.
+    /// </summary>
     public void TriggerEndGame()
     {
         if (endGameScreen != null)
         {
+            // Show an in-scene UI panel
             endGameScreen.SetActive(true);
-            SetPause(true);
+            Time.timeScale = 0f;
         }
         else
         {
-            Debug.LogError("No EndGameScreen assigned to GameManager!");
+            // Fallback: load a dedicated end-game scene
+            SceneManager.LoadScene("EndGameScene");
         }
     }
 
-    // New method to load the menu scene when quitting
+    /// <summary>
+    /// Return to the main menu.  
+    /// Make sure "MenuScene" is added in Build Settings.
+    /// </summary>
     public void QuitToMenu()
     {
-        // Optionally, reset time scale in case the game is paused.
         Time.timeScale = 1f;
-        SceneManager.LoadScene("MenuScene"); // Ensure "MenuScene" is added to Build Settings
+        SceneManager.LoadScene("MenuScene");
     }
 }

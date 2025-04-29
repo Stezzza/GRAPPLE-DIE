@@ -711,13 +711,13 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 887082822}
-  - component: {fileID: 887082824}
   - component: {fileID: 887082825}
   - component: {fileID: 887082827}
   - component: {fileID: 887082826}
+  - component: {fileID: 887082828}
   m_Layer: 5
   m_Name: EndGameTrigger
-  m_TagString: Untagged
+  m_TagString: Endgame
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -737,18 +737,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &887082824
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 887082820}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d1e6e314ac021ab4b8468d7878c1cfc0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!61 &887082825
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -5593,6 +5581,19 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
+--- !u!114 &887082828
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 887082820}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1e6e314ac021ab4b8468d7878c1cfc0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  triggerTag: Player
 --- !u!1 &1016622122
 GameObject:
   m_ObjectHideFlags: 0

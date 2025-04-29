@@ -1,18 +1,16 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class EndScreenManager : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    public void RestartGame()
     {
-        
+        SceneManager.LoadScene("level");
     }
 
-    // Update is called once per frame
-    void Update()
+    // This function can be attached to the Main Menu button
+    public void GoToMainMenu()
     {
-        
+        SceneManager.LoadScene("MainScene");
     }
 }
