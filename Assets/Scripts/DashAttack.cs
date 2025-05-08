@@ -79,10 +79,10 @@ public class DashAttack : MonoBehaviour
         }
 
         // Trigger a brief camera shake for dash initiation.
-        if (CameraShake.Instance != null)
+        /*if (CameraShake.Instance != null)
         {
             CameraShake.Instance.Shake(dashCameraShakeDuration, dashCameraShakeMagnitude);
-        }
+        }*/
 
         if (dashTrail != null)
             dashTrail.emitting = true;

@@ -5,7 +5,7 @@ public class UniqueCameraFollow : MonoBehaviour
     [Header("Camera Follow Settings")]
     public Transform player;
     public Vector3 offset = new Vector3(0f, 2f, -10f);
-    public float smoothSpeed = 0.125f;
+    public float smoothSpeed = 10f;
 
     [Header("Dynamic Zoom Settings")]
     public float targetFOV = 90f;
@@ -28,11 +28,11 @@ public class UniqueCameraFollow : MonoBehaviour
     void FollowPlayer()
     {
         Vector3 desiredPosition = player.position + offset;
-        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed);
+        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, Time.deltaTime * smoothSpeed);
         transform.position = smoothedPosition;
 
         // Optional rotation toward the player for dynamic effect
-        transform.LookAt(player);
+        //transform.LookAt(player);
     }
 
     void DynamicZoom()
