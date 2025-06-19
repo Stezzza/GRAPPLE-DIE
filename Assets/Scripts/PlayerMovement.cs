@@ -6,31 +6,27 @@ using TMPro;
 [RequireComponent(typeof(CapsuleCollider2D))]
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Movement")]
+    [Header("movement")]
     public float maxSpeed = 8f;
     public float groundAccel = 80f;
     public float groundDecel = 80f;
     public float airAccel = 40f;
     public float airDecel = 40f;
 
-    [Header("Jump")]
+    [Header("jump")]
     public float jumpVelocity = 12f;
     public float coyoteTime = 0.1f;
     public float jumpBufferTime = 0.1f;
     public float lowJumpMultiplier = 3f;
     public float fallMultiplier = 5f;
 
-    [Header("Ground Check")]
+    [Header("ground check")]
     public LayerMask groundLayer;
-    [Tooltip("Size of the box used to check for ground.")]
     public Vector2 groundCheckSize = new Vector2(0.8f, 0.2f);
-    [Tooltip("Distance from the collider's bottom to start the ground check.")]
-    public float groundCheckYOffset = -0.5f; // Adjust based on your capsule collider
-    [Tooltip("How far down the ground check box will look for ground.")]
+    public float groundCheckYOffset = -0.5f;
     public float groundCheckDistance = 0.1f;
 
-
-    [Header("Double Jump")]
+    [Header("double jump")]
     public TextMeshProUGUI doubleJumpText;
     public string doubleJumpZoneTag = "DoubleJumpZone";
     public bool hasDoubleJump = false;
@@ -64,18 +60,18 @@ public class PlayerMovement : MonoBehaviour
         if (GameManager.Instance != null && GameManager.Instance.IsPaused)
             return;
 
-        // Handle Inputs and Timers in Update
+        // inputs and timers
         HandleInput();
         HandleTimers();
 
-        // Handle animation and facing direction
+        // visuals
         UpdateAnimator();
         HandleFacingDirection();
     }
 
     void FixedUpdate()
     {
-        // Physics-related logic goes in FixedUpdate
+        // physics
         CheckGrounded();
 
         if (dashAttack != null && dashAttack.IsDashing)
@@ -108,11 +104,10 @@ public class PlayerMovement : MonoBehaviour
             jumpBufferTimer = 0f;
             coyoteTimer = 0f;
             jumpCount++;
-            // Instantly set grounded to false to prevent multiple jumps on the same frame
             IsGrounded = false;
         }
 
-        // Apply better jump physics in FixedUpdate
+        // better jump physics
         if (rb.velocity.y < 0f)
         {
             rb.velocity += Vector2.up * Physics2D.gravity.y * (fallMultiplier - 1f) * Time.fixedDeltaTime;
@@ -129,11 +124,11 @@ public class PlayerMovement : MonoBehaviour
         float speedDiff = targetSpeed - rb.velocity.x;
         bool accelerating = Mathf.Abs(targetSpeed) > 0.01f;
         float accelRate = IsGrounded ? (accelerating ? groundAccel : groundDecel) : (accelerating ? airAccel : airDecel);
-        float movement = speedDiff * accelRate; // Simplified for FixedUpdate
+        float movement = speedDiff * accelRate;
 
         rb.AddForce(movement * Vector2.right);
 
-        // Clamp velocity to maxSpeed
+        // limit speed
         rb.velocity = new Vector2(Mathf.Clamp(rb.velocity.x, -maxSpeed, maxSpeed), rb.velocity.y);
     }
 
@@ -155,7 +150,6 @@ public class PlayerMovement : MonoBehaviour
     private void UpdateAnimator()
     {
         animator.SetFloat("Speed", Mathf.Abs(rb.velocity.x));
-        // Add this line to control the falling animation
         animator.SetFloat("VerticalVelocity", rb.velocity.y);
     }
 

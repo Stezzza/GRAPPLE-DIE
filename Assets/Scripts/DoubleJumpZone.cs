@@ -1,7 +1,7 @@
 using UnityEngine;
 using TMPro;
 
-public class DoubleJumpPickup : MonoBehaviour
+public class DoubleJumpZone : MonoBehaviour
 {
     public TextMeshProUGUI labelText;
     public string displayText = "Extra Jump";
@@ -24,7 +24,7 @@ public class DoubleJumpPickup : MonoBehaviour
             {
                 player.hasDoubleJump = true;
                 labelText.text = "Double Jump Unlocked!";
-                Destroy(gameObject); // Optional: remove box after pickup
+                Destroy(gameObject); // pickup disappears
             }
         }
     }

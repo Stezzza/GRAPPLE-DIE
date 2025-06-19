@@ -3,23 +3,23 @@
 [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
 public class GroundEnemyAI : MonoBehaviour
 {
-    [Header("Patrol Settings")]
+    [Header("patrol settings")]
     public float leftBoundary = 1f;
     public float rightBoundary = 3.5f;
     public float patrolSpeed = 2f;
 
-    [Header("Chase Settings")]
+    [Header("chase settings")]
     public Transform player;
     public float chaseSpeed = 3.5f;
     public float detectionRadius = 5f;
 
-    [Header("Sensors")]
+    [Header("sensors")]
     public Vector2 groundSensorOffset = new Vector2(0.5f, -0.5f);
     public float groundSensorRadius = 0.1f;
     public float wallSensorDistance = 0.1f;
     public LayerMask groundLayer;
 
-    // Internals
+    // internal vars
     private Rigidbody2D rb;
     private SpriteRenderer sprite;
     private bool facingRight = true;
@@ -34,7 +34,7 @@ public class GroundEnemyAI : MonoBehaviour
 
     void OnEnable()
     {
-        // Listen for the player's death event
+        // listen for player death
         PlayerHealth.OnPlayerDeath += HandlePlayerDeath;
     }
 
@@ -45,22 +45,21 @@ public class GroundEnemyAI : MonoBehaviour
 
     private void HandlePlayerDeath()
     {
-        // Mark the player as dead so we stop chasing and stop referencing player.transform
+        // stop chasing when player dies
         playerAlive = false;
     }
 
     void FixedUpdate()
     {
-        // 1. If player is dead, immediately halt all horizontal movement.
+        // stop if player dead
         if (!playerAlive)
         {
             rb.velocity = new Vector2(0f, rb.velocity.y);
             return;
         }
 
-        // 2. Determine whether we should chase (and only if player reference still exists).
-        if (player != null &&
-            Vector2.Distance(transform.position, player.position) <= detectionRadius)
+        // check if should chase
+        if (player != null && Vector2.Distance(transform.position, player.position) <= detectionRadius)
         {
             isChasing = true;
         }
@@ -69,7 +68,7 @@ public class GroundEnemyAI : MonoBehaviour
             isChasing = false;
         }
 
-        // 3. Compute desired horizontal direction: +1 right, -1 left, or 0 to stop.
+        // get move direction
         int dir;
         if (isChasing)
         {
@@ -80,46 +79,37 @@ public class GroundEnemyAI : MonoBehaviour
             dir = facingRight ? 1 : -1;
         }
 
-        // 4. Sensor positions
-        Vector2 groundSensorPos = (Vector2)transform.position +
-                                  new Vector2(groundSensorOffset.x * dir,
-                                              groundSensorOffset.y);
+        // sensor positions
+        Vector2 groundSensorPos = (Vector2)transform.position + new Vector2(groundSensorOffset.x * dir, groundSensorOffset.y);
         Vector2 wallSensorOrigin = transform.position;
 
-        // 5. Perform ground‐and‐wall checks
-        bool groundAhead = Physics2D.OverlapCircle(
-            groundSensorPos, groundSensorRadius, groundLayer
-        );
-        bool wallAhead = Physics2D.Raycast(
-            wallSensorOrigin,
-            Vector2.right * dir,
-            wallSensorDistance,
-            groundLayer
-        );
+        // check sensors
+        bool groundAhead = Physics2D.OverlapCircle(groundSensorPos, groundSensorRadius, groundLayer);
+        bool wallAhead = Physics2D.Raycast(wallSensorOrigin, Vector2.right * dir, wallSensorDistance, groundLayer);
 
-        // 6. React to edges or walls
+        // what to do at edge or wall
         if (!groundAhead || wallAhead)
         {
             if (isChasing)
             {
-                // If chasing and we hit an edge or wall, stop rather than run off.
+                // stop if chasing
                 dir = 0;
             }
             else
             {
-                // If patrolling, flip direction and recalc dir
+                // flip if patrolling
                 facingRight = !facingRight;
                 dir = facingRight ? 1 : -1;
             }
         }
 
-        // 7. Choose speed based on mode
+        // choose speed
         float speed = isChasing ? chaseSpeed : patrolSpeed;
 
-        // 8. Apply new velocity (preserving any vertical velocity for gravity)
+        // move
         rb.velocity = new Vector2(dir * speed, rb.velocity.y);
 
-        // 9. Flip sprite when direction changes
+        // flip sprite
         if (dir > 0 && !facingRight) Flip();
         else if (dir < 0 && facingRight) Flip();
     }
@@ -132,18 +122,8 @@ public class GroundEnemyAI : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        // Visualise detection radius
+        // draw gizmos for editor
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
-
-        // Visualise ground sensor
-        Gizmos.color = Color.yellow;
-        Vector3 gs = transform.position + (Vector3)groundSensorOffset * (facingRight ? 1 : -1);
-        Gizmos.DrawWireSphere(gs, groundSensorRadius);
-
-        // Visualise wall sensor
-        Gizmos.color = Color.cyan;
-        Vector3 wsDir = Vector3.right * (facingRight ? 1 : -1);
-        Gizmos.DrawLine(transform.position, transform.position + wsDir * wallSensorDistance);
     }
 }

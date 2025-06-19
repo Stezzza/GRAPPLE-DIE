@@ -3,40 +3,49 @@ using System.Collections;
 
 public class CameraShake : MonoBehaviour
 {
-    public static CameraShake Instance;
-    public float defaultShakeDuration = 0.2f;
-    public float defaultShakeMagnitude = 0.1f;
+    // static instance to access from other scripts
+    public static CameraShake Instance { get; private set; }
 
-    private Vector3 originalPosition;
+    // how much to shake by
+    private Vector3 shakeOffset = Vector3.zero;
 
     void Awake()
     {
-        // Implement a singleton pattern for easy access.
-        if (Instance == null)
-            Instance = this;
-        else
-            Destroy(gameObject);
+        Instance = this;
+    }
+
+    // applies the shake after camera follow
+    void LateUpdate()
+    {
+        if (shakeOffset != Vector3.zero)
+        {
+            transform.position += shakeOffset;
+        }
     }
 
     public void Shake(float duration, float magnitude)
     {
-        StartCoroutine(DoShake(duration, magnitude));
+        StartCoroutine(ShakeCoroutine(duration, magnitude));
     }
 
-    private IEnumerator DoShake(float duration, float magnitude)
+    private IEnumerator ShakeCoroutine(float duration, float magnitude)
     {
-        originalPosition = transform.localPosition;
-        float elapsed = 0f;
+        float elapsed = 0.0f;
 
         while (elapsed < duration)
         {
-            float offsetX = Random.Range(-1f, 1f) * magnitude;
-            float offsetY = Random.Range(-1f, 1f) * magnitude;
-            transform.localPosition = originalPosition + new Vector3(offsetX, offsetY, 0);
+            float x = Random.Range(-1f, 1f) * magnitude;
+            float y = Random.Range(-1f, 1f) * magnitude;
+
+            // set the offset for lateupdate
+            shakeOffset = new Vector3(x, y, 0);
+
             elapsed += Time.deltaTime;
-            yield return null;
+
+            yield return null; // wait a frame
         }
 
-        transform.localPosition = originalPosition;
+        // reset when done
+        shakeOffset = Vector3.zero;
     }
 }

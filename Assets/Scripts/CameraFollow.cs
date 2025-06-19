@@ -1,54 +1,42 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Camera))]
-public class UniqueCameraFollow : MonoBehaviour
+public class CameraFollow : MonoBehaviour
 {
-    [Header("Camera Follow Settings")]
-    [Tooltip("Drag your Player transform here (must have a Rigidbody2D).")]
+    [Header("follow settings")]
     public Transform player;
-
-    [Tooltip("Offset from the player's position.")]
     public Vector3 offset = new Vector3(0f, 2f, -10f);
-
-    [Tooltip("How quickly the camera moves to follow.")]
     public float smoothSpeed = 10f;
 
-    [Header("Dynamic Zoom Settings")]
-    [Tooltip("Base field of view when player is stationary.")]
+    [Header("zoom settings")]
     public float baseFOV = 60f;
-
-    [Tooltip("Maximum additional FOV at top speed.")]
     public float maxFOVIncrease = 10f;
-
-    [Tooltip("How quickly the FOV interpolates.")]
     public float zoomSpeed = 5f;
-
-    [Tooltip("Approximate top player speed used to normalize zoom (e.g. 20 units/sec).")]
     public float maxPlayerSpeed = 20f;
 
-    // Cached references
+    // component refs
     private Camera cam;
     private Rigidbody2D playerRb;
 
     void Awake()
     {
-        // Cache camera component
+        // get camera
         cam = GetComponent<Camera>();
     }
 
     void Start()
     {
-        // Initialize FOV
+        // set starting fov
         cam.fieldOfView = baseFOV;
 
-        // Cache the player's Rigidbody2D if possible
+        // get player physics
         if (player != null)
             playerRb = player.GetComponent<Rigidbody2D>();
     }
 
     void OnEnable()
     {
-        // Subscribe to a player-death event (optional)
+        // listen for player death
         PlayerHealth.OnPlayerDeath += HandlePlayerDeath;
     }
 
@@ -59,21 +47,19 @@ public class UniqueCameraFollow : MonoBehaviour
 
     void LateUpdate()
     {
-        // If we no longer have a player reference, try to find one by tag
+        // if no player, try to find one
         if (player == null)
         {
             TryFindPlayer();
             if (player == null)
-                return;  // nothing to follow
+                return; // exit if still no player
         }
 
         FollowPlayer();
         DynamicZoom();
     }
 
-    /// <summary>
-    /// Smoothly moves the camera toward the player’s position plus offset.
-    /// </summary>
+    // moves camera to follow player
     private void FollowPlayer()
     {
         Vector3 desiredPosition = player.position + offset;
@@ -85,19 +71,17 @@ public class UniqueCameraFollow : MonoBehaviour
         transform.position = smoothedPosition;
     }
 
-    /// <summary>
-    /// Adjusts the camera’s field of view based on the player’s speed.
-    /// </summary>
+    // zooms out based on player speed
     private void DynamicZoom()
     {
         float speed = 0f;
         if (playerRb != null)
             speed = playerRb.velocity.magnitude;
 
-        // Normalize speed to a 0–1 range
+        // speed from 0 to 1
         float t = Mathf.Clamp01(speed / maxPlayerSpeed);
 
-        // Compute the target FOV and interpolate toward it
+        // calculate and set new fov
         float targetFOV = baseFOV + (maxFOVIncrease * t);
         cam.fieldOfView = Mathf.Lerp(
             cam.fieldOfView,
@@ -106,18 +90,14 @@ public class UniqueCameraFollow : MonoBehaviour
         );
     }
 
-    /// <summary>
-    /// Clears our player reference when they die, preventing further access.
-    /// </summary>
+    // clears player when they die
     private void HandlePlayerDeath()
     {
         player = null;
         playerRb = null;
     }
 
-    /// <summary>
-    /// Attempts to locate a Player by tag if the reference has been lost.
-    /// </summary>
+    // finds player by tag
     private void TryFindPlayer()
     {
         GameObject go = GameObject.FindWithTag("Player");

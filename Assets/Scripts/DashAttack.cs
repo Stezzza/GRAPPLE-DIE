@@ -4,41 +4,36 @@ using System.Collections.Generic;
 
 public class DashAttack : MonoBehaviour
 {
-    [Header("Attack Settings")]
+    [Header("attack settings")]
     [SerializeField] private float dashSpeed = 25f;
     [SerializeField] private float dashDuration = 0.15f;
     [SerializeField] private float damageRadius = 0.5f;
     [SerializeField] private int damageAmount = 50;
     [SerializeField] private LayerMask enemyLayer;
 
-    [Header("Cooldown Settings (Grapple Only)")]
+    [Header("cooldown settings (grapple only)")]
     [SerializeField] private bool rechargeDashOnGrapple = true;
 
-    [Header("Dash Visual Effects")]
+    [Header("dash visual effects")]
     [SerializeField] private GameObject dashParticleEffect;
     [SerializeField] private GameObject hitParticleEffect;
 
-    [Header("Camera Shake Settings")]
+    [Header("camera shake settings")]
     [SerializeField] private float dashCameraShakeDuration = 0.1f;
     [SerializeField] private float dashCameraShakeMagnitude = 0.1f;
     [SerializeField] private float hitCameraShakeDuration = 0.2f;
     [SerializeField] private float hitCameraShakeMagnitude = 0.15f;
 
-    [Header("Dash Trail")]
+    [Header("dash trail")]
     [SerializeField] private TrailRenderer dashTrail;
 
-    // Removed: Ground Check Settings - We will use PlayerMovement's grounded state
-    // [SerializeField] private Transform groundCheck;
-    // [SerializeField] private float groundCheckRadius = 0.2f;
-    // [SerializeField] private LayerMask groundLayer;
-
-    // Cached components
+    // component refs
     private Rigidbody2D rb;
     private Camera mainCam;
     private Animator animator;
-    private PlayerMovement playerMovement; // Reference to PlayerMovement script
+    private PlayerMovement playerMovement;
 
-    // State tracking
+    // state
     private bool isDashing = false;
     private bool hasDashCharge = false;
     private bool wasGrounded;
@@ -50,21 +45,21 @@ public class DashAttack : MonoBehaviour
     public bool IsDashing => isDashing;
     public bool HasDashCharge => hasDashCharge;
 
-    #region Unity Lifecycle
+    // setup
     private void Awake()
     {
         CacheComponents();
         InitializeTrail();
-        playerMovement = GetComponent<PlayerMovement>(); // Get reference
+        playerMovement = GetComponent<PlayerMovement>();
         if (playerMovement == null)
         {
-            Debug.LogError("DashAttack: PlayerMovement component not found on this GameObject! Dash recharge will not work correctly.");
+            Debug.LogError("dashattack: playermovement component not found");
         }
     }
 
+    // more setup
     private void Start()
     {
-        // Initialize wasGrounded using PlayerMovement's state if available
         wasGrounded = InternalIsGrounded();
         if (wasGrounded)
         {
@@ -72,6 +67,7 @@ public class DashAttack : MonoBehaviour
         }
     }
 
+    // main loop
     private void Update()
     {
         bool isCurrentlyGrounded = InternalIsGrounded();
@@ -86,31 +82,25 @@ public class DashAttack : MonoBehaviour
         wasGrounded = isCurrentlyGrounded;
     }
 
-    // OnCollisionEnter2D from original DashAttack script was removed as EndDash is handled by coroutine.
-    // If specific collision during dash should end it, that logic can be re-added here or in PerformDash.
-
+    // gizmos for scene view
     private void OnDrawGizmosSelected()
     {
-        // Damage radius Gizmo
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, damageRadius);
-
-        // Removed ground check Gizmo as it's no longer used by this script
     }
-    #endregion
 
-    #region Initialization
+    // gets components
     private void CacheComponents()
     {
         rb = GetComponent<Rigidbody2D>();
         mainCam = Camera.main;
         animator = GetComponent<Animator>();
 
-        if (rb == null) Debug.LogError("Rigidbody2D component required!", this);
-        if (mainCam == null) Debug.LogError("Main Camera not found!", this);
-        // Removed: if (groundCheck == null) Debug.LogError("Ground check Transform not assigned!", this);
+        if (rb == null) Debug.LogError("rigidbody2d required", this);
+        if (mainCam == null) Debug.LogError("main camera not found", this);
     }
 
+    // setup for trail renderer
     private void InitializeTrail()
     {
         if (dashTrail != null)
@@ -121,9 +111,8 @@ public class DashAttack : MonoBehaviour
             dashTrail.endWidth = 0f;
         }
     }
-    #endregion
 
-    #region Input and Ground Handling (Now relies on PlayerMovement for ground state)
+    // checks for mouse click
     private void HandleDashInput()
     {
         if (Input.GetMouseButtonDown(0) && hasDashCharge && !isDashing)
@@ -139,25 +128,23 @@ public class DashAttack : MonoBehaviour
         }
     }
 
-    // This method now uses PlayerMovement's IsGrounded state
+    // check if grounded using player movement script
     private bool InternalIsGrounded()
     {
         if (playerMovement != null)
         {
             return playerMovement.IsGrounded;
         }
-        // Fallback if PlayerMovement is missing, though an error is logged in Awake.
         return false;
     }
-    #endregion
 
-    #region Dash Execution
+    // does the dash
     private IEnumerator PerformDash(Vector2 direction)
     {
         StartDash(direction);
 
-        float originalGravityScale = rb.gravityScale; // Store original gravity
-        rb.gravityScale = 0f; // No gravity during dash for consistent movement
+        float originalGravityScale = rb.gravityScale;
+        rb.gravityScale = 0f; // turn off gravity
 
         float elapsedTime = 0f;
         while (elapsedTime < dashDuration && isDashing)
@@ -169,10 +156,11 @@ public class DashAttack : MonoBehaviour
             yield return null;
         }
 
-        rb.gravityScale = originalGravityScale; // Restore gravity
+        rb.gravityScale = originalGravityScale; // turn gravity back on
         EndDash();
     }
 
+    // stuff to do at start of dash
     private void StartDash(Vector2 direction)
     {
         isDashing = true;
@@ -189,32 +177,23 @@ public class DashAttack : MonoBehaviour
             animator.SetTrigger(Attack1Hash);
     }
 
+    // stuff to do at end of dash
     private void EndDash()
     {
         isDashing = false;
-        // Don't zero out velocity here if you want to carry momentum,
-        // or if PlayerMovement should resume control smoothly.
-        // For now, let PlayerMovement take over. If dash ends mid-air, gravity will apply.
-        // rb.velocity = Vector2.zero; // Original - might feel abrupt.
 
         if (dashTrail != null)
             dashTrail.emitting = false;
 
-        if (animator != null && gameObject.activeInHierarchy) // Check if animator is still valid
-            animator.Play(IdleHash); // Consider using a "DashEnd" trigger or just letting movement states take over
+        if (animator != null && gameObject.activeInHierarchy)
+            animator.Play(IdleHash);
     }
-    #endregion
 
-    #region Combat System
+    // checks for enemies in radius
     private void CheckForEnemyHits()
     {
         Collider2D[] hitResults = new Collider2D[10];
-        int hitCount = Physics2D.OverlapCircleNonAlloc(
-            transform.position,
-            damageRadius,
-            hitResults,
-            enemyLayer
-        );
+        int hitCount = Physics2D.OverlapCircleNonAlloc(transform.position, damageRadius, hitResults, enemyLayer);
 
         for (int i = 0; i < hitCount; i++)
         {
@@ -227,59 +206,53 @@ public class DashAttack : MonoBehaviour
         }
     }
 
+    // what to do when an enemy is hit
     private void ProcessEnemyHit(Collider2D enemy)
     {
         SpawnHitEffect(enemy.transform.position);
         TriggerCameraShake(hitCameraShakeDuration, hitCameraShakeMagnitude);
 
-        var enemyHealth = enemy.GetComponent<EnemyHealth>(); // Assuming you have an EnemyHealth script
+        var enemyHealth = enemy.GetComponent<EnemyHealth>();
         if (enemyHealth != null)
         {
             enemyHealth.TakeDamage(damageAmount);
         }
 
-        var damageable = enemy.GetComponent<IDamageable>(); // Using the interface
+        var damageable = enemy.GetComponent<IDamageable>();
         if (damageable != null)
         {
             damageable.TakeDamage(damageAmount);
         }
     }
-    #endregion
 
-    #region Visual Effects
+    // makes dash particles
     private void SpawnDashEffect()
     {
         if (dashParticleEffect != null)
             Instantiate(dashParticleEffect, transform.position, Quaternion.identity);
     }
 
+    // makes hit particles
     private void SpawnHitEffect(Vector3 position)
     {
         if (hitParticleEffect != null)
             Instantiate(hitParticleEffect, position, Quaternion.identity);
     }
 
+    // shakes camera
     private void TriggerCameraShake(float duration, float magnitude)
     {
-        // Assuming you have a CameraShake singleton or static instance
-        // if (CameraShake.Instance != null)
-        // CameraShake.Instance.Shake(duration, magnitude);
+        if (CameraShake.Instance != null)
+            CameraShake.Instance.Shake(duration, magnitude);
     }
 
+    // makes player face dash direction
     private void HandleFacingDirection(Vector2 direction)
     {
-        // This will be overridden by PlayerMovement's facing logic unless PlayerMovement's logic is also conditional.
-        // PlayerMovement already handles flipping based on rb.velocity.x.
-        // So, this method in DashAttack might be redundant or could be removed if PlayerMovement's handling is preferred.
-        // For now, let it be, but be aware of potential conflict or redundancy.
-        // if (Mathf.Abs(direction.x) < 0.1f) return;
-        // Vector3 localScale = transform.localScale;
-        // localScale.x = direction.x > 0 ? Mathf.Abs(localScale.x) : -Mathf.Abs(localScale.x);
-        // transform.localScale = localScale;
+        // empty for now, playermovement handles it
     }
-    #endregion
 
-    #region Public Methods
+    // called when grapple hits
     public void GrappleSuccess()
     {
         if (isDashing)
@@ -291,16 +264,17 @@ public class DashAttack : MonoBehaviour
         }
     }
 
+    // stops the dash early
     public void CancelDash()
     {
         if (isDashing)
         {
-            // Need to ensure gravity is restored if PerformDash was interrupted
-            rb.gravityScale = playerMovement != null ? playerMovement.GetComponent<Rigidbody2D>().gravityScale : 1f; // Assuming playerMovement holds reference to default gravity scale or get from rb
+            rb.gravityScale = playerMovement != null ? playerMovement.GetComponent<Rigidbody2D>().gravityScale : 1f;
             EndDash();
         }
     }
 
+    // tries to dash
     public bool TryDash(Vector2 direction)
     {
         if (!hasDashCharge || isDashing) return false;
@@ -308,20 +282,13 @@ public class DashAttack : MonoBehaviour
         direction = direction.normalized;
         if (direction.magnitude < 0.1f) return false;
 
-        // HandleFacingDirection(direction); // Potentially redundant, see note above
         StartCoroutine(PerformDash(direction));
         return true;
     }
-    #endregion
 }
 
-// Interface for alternative damage system
+// interface for things that can be damaged
 public interface IDamageable
 {
     void TakeDamage(int damage);
 }
-
-// Dummy CameraShake and EnemyHealth for compilation if not present
-// public class CameraShake : MonoBehaviour { public static CameraShake Instance; public void Shake(float d, float m) {} }
-// public class EnemyHealth : MonoBehaviour { public void TakeDamage(int d) {} }
-// public class GameManager : MonoBehaviour { public static GameManager Instance; public bool IsPaused; }

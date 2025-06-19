@@ -3,7 +3,7 @@ using System.Collections;
 
 public class GrappleHook : MonoBehaviour
 {
-    [Header("Grapple Settings")]
+    [Header("grapple settings")]
     [SerializeField] private LineRenderer lineRenderer;
     [SerializeField] private Transform hookOrigin;
     [SerializeField] private float maxGrappleDistance = 50f;
@@ -11,45 +11,45 @@ public class GrappleHook : MonoBehaviour
     [SerializeField] private float hookTravelSpeed = 100f;
     [SerializeField] private bool allowGrappleWhileGrounded = false;
 
-    [Header("Swing Physics")]
+    [Header("swing physics")]
     [SerializeField] private float swingForceMultiplier = 20f;
     [SerializeField] private float verticalClimbSpeed = 15f;
     [SerializeField] private float maxSwingSpeed = 30f;
     [SerializeField] private float airResistance = 0.95f;
 
-    [Header("Rope Controls")]
+    [Header("rope controls")]
     [SerializeField] private float ropeExtendSpeed = 10f;
     [SerializeField] private float ropeRetractSpeed = 15f;
     [SerializeField] private float minRopeLength = 2f;
     [SerializeField] private float maxRopeLength = 60f;
     [SerializeField] private bool autoAdjustRopeLength = true;
-    [SerializeField] private LayerMask groundLayer; // Add ground detection
+    [SerializeField] private LayerMask groundLayer;
 
-    [Header("Advanced Physics")]
+    [Header("advanced physics")]
     [SerializeField] private float momentumConservation = 0.8f;
     [SerializeField] private float releaseBoostMultiplier = 1.2f;
     [SerializeField] private AnimationCurve swingForceCurve = AnimationCurve.EaseInOut(0f, 0.5f, 1f, 1f);
 
-    [Header("Visual Effects")]
+    [Header("visual effects")]
     [SerializeField] private GameObject hookProjectile;
     [SerializeField] private GameObject grappleHitEffect;
     [SerializeField] private float ropeWaveAmplitude = 0.1f;
     [SerializeField] private float ropeWaveFrequency = 2f;
     [SerializeField] private int ropeSegments = 20;
 
-    [Header("Audio")]
+    [Header("audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip grappleFireSound;
     [SerializeField] private AudioClip grappleHitSound;
     [SerializeField] private AudioClip grappleReleaseSound;
 
-    // Cached components
+    // component refs
     private Rigidbody2D rb;
     private DistanceJoint2D ropeJoint;
     private Camera mainCam;
     private DashAttack dashAttack;
 
-    // State tracking
+    // state
     private Vector2 grapplePoint;
     private Vector2 hookVelocity;
     private bool isGrappling = false;
@@ -59,29 +59,29 @@ public class GrappleHook : MonoBehaviour
     private float targetRopeLength;
     private Vector2 releaseVelocity;
 
-    // Input tracking
+    // input
     private float horizontalInput;
     private float verticalInput;
     private bool grappleInputHeld;
     private bool grappleInputPressed;
     private bool grappleInputReleased;
 
-    // Visual rope points
+    // rope visuals
     private Vector3[] ropePoints;
 
-    // Properties
     public bool IsGrappling => isGrappling;
     public bool IsHookTraveling => isHookTraveling;
     public float RopeLength => currentRopeLength;
     public Vector2 GrapplePoint => grapplePoint;
 
-    #region Unity Lifecycle
+    // setup
     private void Awake()
     {
         CacheComponents();
         InitializeRope();
     }
 
+    // main loop
     private void Update()
     {
         HandleInput();
@@ -89,6 +89,7 @@ public class GrappleHook : MonoBehaviour
         UpdateVisuals();
     }
 
+    // physics loop
     private void FixedUpdate()
     {
         if (isGrappling)
@@ -99,18 +100,17 @@ public class GrappleHook : MonoBehaviour
         }
     }
 
+    // runs after update
     private void LateUpdate()
     {
-        // Track state changes for momentum conservation
         if (wasGrappling && !isGrappling)
         {
             ApplyReleaseBoost();
         }
         wasGrappling = isGrappling;
     }
-    #endregion
 
-    #region Initialization
+    // get components
     private void CacheComponents()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -120,11 +120,11 @@ public class GrappleHook : MonoBehaviour
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
-        // Optimize rigidbody settings
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         rb.freezeRotation = true;
     }
 
+    // rope setup
     private void InitializeRope()
     {
         ropePoints = new Vector3[ropeSegments + 1];
@@ -136,26 +136,22 @@ public class GrappleHook : MonoBehaviour
             lineRenderer.sortingOrder = 10;
         }
     }
-    #endregion
 
-    #region Input Handling
+    // check for player input
     private void HandleInput()
     {
-        // Grapple input
         grappleInputPressed = Input.GetMouseButtonDown(1);
         grappleInputHeld = Input.GetMouseButton(1);
         grappleInputReleased = Input.GetMouseButtonUp(1);
 
-        // Movement input with deadzone
         float rawHorizontal = Input.GetAxisRaw("Horizontal");
         float rawVertical = Input.GetAxisRaw("Vertical");
 
         horizontalInput = Mathf.Abs(rawHorizontal) > 0.1f ? rawHorizontal : 0f;
         verticalInput = Mathf.Abs(rawVertical) > 0.1f ? rawVertical : 0f;
     }
-    #endregion
 
-    #region Grapple Logic
+    // grapple logic
     private void HandleGrappleLogic()
     {
         if (grappleInputPressed && !isGrappling && !isHookTraveling)
@@ -168,9 +164,9 @@ public class GrappleHook : MonoBehaviour
         }
     }
 
+    // try to shoot hook
     private void TryFireGrapple()
     {
-        // Check if grounded and grappling is disabled while grounded
         if (!allowGrappleWhileGrounded && IsGrounded())
             return;
 
@@ -181,13 +177,13 @@ public class GrappleHook : MonoBehaviour
         PlaySound(grappleFireSound);
     }
 
+    // hook flying through air
     private IEnumerator FireHook(Vector2 direction)
     {
         isHookTraveling = true;
         Vector2 hookPosition = hookOrigin.position;
         hookVelocity = direction * hookTravelSpeed;
 
-        // Spawn hook projectile if available
         GameObject hook = null;
         if (hookProjectile != null)
         {
@@ -200,12 +196,11 @@ public class GrappleHook : MonoBehaviour
             Vector2 newPosition = hookPosition + hookVelocity * Time.deltaTime;
             float segmentDistance = Vector2.Distance(hookPosition, newPosition);
 
-            // Raycast for collision
             RaycastHit2D hit = Physics2D.Raycast(hookPosition, hookVelocity.normalized, segmentDistance, grappleLayer);
 
             if (hit.collider != null)
             {
-                // Hit something!
+                // hit something
                 AttachGrapple(hit.point);
                 if (hook != null) Destroy(hook);
                 break;
@@ -214,11 +209,9 @@ public class GrappleHook : MonoBehaviour
             hookPosition = newPosition;
             travelDistance += segmentDistance;
 
-            // Update hook projectile position
             if (hook != null)
                 hook.transform.position = hookPosition;
 
-            // Show hook travel line
             if (lineRenderer != null)
             {
                 lineRenderer.positionCount = 2;
@@ -229,7 +222,6 @@ public class GrappleHook : MonoBehaviour
             yield return null;
         }
 
-        // Hook missed or reached max distance
         if (isHookTraveling)
         {
             isHookTraveling = false;
@@ -238,17 +230,16 @@ public class GrappleHook : MonoBehaviour
         }
     }
 
+    // attach to a point
     private void AttachGrapple(Vector2 hitPoint)
     {
         grapplePoint = hitPoint;
         isHookTraveling = false;
         isGrappling = true;
 
-        // Calculate rope length
         currentRopeLength = Vector2.Distance(transform.position, grapplePoint);
         targetRopeLength = currentRopeLength;
 
-        // Create distance joint
         ropeJoint = gameObject.AddComponent<DistanceJoint2D>();
         ropeJoint.autoConfigureDistance = false;
         ropeJoint.connectedAnchor = grapplePoint;
@@ -256,15 +247,14 @@ public class GrappleHook : MonoBehaviour
         ropeJoint.enableCollision = false;
         ropeJoint.maxDistanceOnly = true;
 
-        // Effects
         SpawnHitEffect();
         PlaySound(grappleHitSound);
 
-        // Notify dash attack of successful grapple
         if (dashAttack != null)
             dashAttack.GrappleSuccess();
     }
 
+    // let go of grapple
     private void ReleaseGrapple()
     {
         if (ropeJoint != null)
@@ -272,7 +262,6 @@ public class GrappleHook : MonoBehaviour
             Destroy(ropeJoint);
         }
 
-        // Store release velocity for momentum boost
         if (isGrappling)
         {
             releaseVelocity = rb.velocity;
@@ -286,19 +275,16 @@ public class GrappleHook : MonoBehaviour
 
         PlaySound(grappleReleaseSound);
     }
-    #endregion
 
-    #region Physics
+    // applies swing force
     private void ApplySwingPhysics()
     {
         Vector2 playerToGrapple = grapplePoint - (Vector2)transform.position;
         Vector2 swingDirection = Vector2.Perpendicular(playerToGrapple).normalized;
 
-        // Determine swing direction based on player position relative to grapple point
         if (transform.position.x > grapplePoint.x)
             swingDirection *= -1f;
 
-        // Apply horizontal swing force
         if (Mathf.Abs(horizontalInput) > 0.1f)
         {
             float swingIntensity = swingForceCurve.Evaluate(Mathf.Abs(Vector2.Dot(rb.velocity.normalized, swingDirection)));
@@ -306,7 +292,6 @@ public class GrappleHook : MonoBehaviour
             rb.AddForce(swingForce);
         }
 
-        // Apply vertical climbing force
         if (Mathf.Abs(verticalInput) > 0.1f)
         {
             Vector2 climbDirection = playerToGrapple.normalized;
@@ -314,90 +299,39 @@ public class GrappleHook : MonoBehaviour
             rb.AddForce(climbForce);
         }
 
-        // Limit maximum swing speed
         if (rb.velocity.magnitude > maxSwingSpeed)
         {
             rb.velocity = rb.velocity.normalized * maxSwingSpeed;
         }
     }
 
+    // changes rope length with w/s
     private void HandleRopeLength()
     {
-        // Manual rope length control
         if (Mathf.Abs(verticalInput) > 0.1f)
         {
-            if (verticalInput > 0) // W key - shorten rope
+            if (verticalInput > 0)
             {
                 targetRopeLength -= ropeRetractSpeed * Time.fixedDeltaTime;
             }
-            else // S key - lengthen rope (but check for ground collision)
+            else
             {
-                // Check if extending rope would put player through ground
-                Vector2 playerToGrapple = grapplePoint - (Vector2)transform.position;
-                Vector2 directionToGrapple = playerToGrapple.normalized;
-                float extendAmount = ropeExtendSpeed * Time.fixedDeltaTime;
-
-                // Raycast downward to check for ground
-                RaycastHit2D groundHit = Physics2D.Raycast(
-                    transform.position,
-                    Vector2.down,
-                    extendAmount + 1f,
-                    groundLayer
-                );
-
-                // Also check in the direction we're moving when extending
-                RaycastHit2D moveHit = Physics2D.Raycast(
-                    transform.position,
-                    -directionToGrapple,
-                    extendAmount + 0.5f,
-                    groundLayer
-                );
-
-                // Only extend if we won't hit ground
-                if (groundHit.collider == null && moveHit.collider == null)
+                RaycastHit2D groundHit = Physics2D.Raycast(transform.position, Vector2.down, 1.5f, groundLayer);
+                if (groundHit.collider == null)
                 {
-                    targetRopeLength += extendAmount;
-                }
-                else
-                {
-                    // If we would hit ground, limit rope length to current distance
-                    float safeDistance = Vector2.Distance(transform.position, grapplePoint) - 0.5f;
-                    targetRopeLength = Mathf.Min(targetRopeLength, safeDistance);
+                    targetRopeLength += ropeExtendSpeed * Time.fixedDeltaTime;
                 }
             }
-
             targetRopeLength = Mathf.Clamp(targetRopeLength, minRopeLength, maxRopeLength);
         }
         else if (autoAdjustRopeLength)
         {
-            // Auto-adjust rope length based on momentum
             float velocityFactor = rb.velocity.magnitude / maxSwingSpeed;
             float desiredLength = Mathf.Lerp(currentRopeLength, targetRopeLength, velocityFactor * 0.1f);
             targetRopeLength = desiredLength;
         }
 
-        // Smoothly adjust rope length
         currentRopeLength = Mathf.Lerp(currentRopeLength, targetRopeLength, Time.fixedDeltaTime * 5f);
-
-        // Additional ground collision check when rope is shortening
-        Vector2 currentPlayerToGrapple = grapplePoint - (Vector2)transform.position;
-        if (currentPlayerToGrapple.magnitude < currentRopeLength)
-        {
-            // Check if current position would intersect with ground
-            RaycastHit2D immediateGroundCheck = Physics2D.Raycast(
-                transform.position,
-                Vector2.down,
-                0.6f,
-                groundLayer
-            );
-
-            if (immediateGroundCheck.collider != null)
-            {
-                // Prevent rope from pulling player through ground
-                float safeRopeLength = Vector2.Distance(transform.position, grapplePoint) + 0.5f;
-                currentRopeLength = Mathf.Max(currentRopeLength, safeRopeLength);
-            }
-        }
 
         if (ropeJoint != null)
         {
@@ -405,11 +339,13 @@ public class GrappleHook : MonoBehaviour
         }
     }
 
+    // slows down player in air
     private void ApplyAirResistance()
     {
         rb.velocity *= airResistance;
     }
 
+    // boost when releasing grapple
     private void ApplyReleaseBoost()
     {
         if (releaseVelocity.magnitude > 5f)
@@ -418,9 +354,8 @@ public class GrappleHook : MonoBehaviour
             rb.velocity = boostVelocity;
         }
     }
-    #endregion
 
-    #region Visuals
+    // draw rope visuals
     private void UpdateVisuals()
     {
         if (isGrappling && lineRenderer != null)
@@ -429,10 +364,10 @@ public class GrappleHook : MonoBehaviour
         }
     }
 
+    // make rope look wavy
     private void UpdateRopeVisual()
     {
         lineRenderer.positionCount = ropeSegments + 1;
-
         Vector2 ropeStart = hookOrigin.position;
         Vector2 ropeEnd = grapplePoint;
 
@@ -441,17 +376,15 @@ public class GrappleHook : MonoBehaviour
             float t = (float)i / ropeSegments;
             Vector2 basePosition = Vector2.Lerp(ropeStart, ropeEnd, t);
 
-            // Add rope sag/wave effect
             float sag = Mathf.Sin(t * Mathf.PI) * ropeWaveAmplitude * currentRopeLength * 0.1f;
             float wave = Mathf.Sin(Time.time * ropeWaveFrequency + t * Mathf.PI * 2) * ropeWaveAmplitude * 0.5f;
-
             Vector2 perpendicular = Vector2.Perpendicular((ropeEnd - ropeStart).normalized);
             ropePoints[i] = basePosition + perpendicular * (sag + wave);
         }
-
         lineRenderer.SetPositions(ropePoints);
     }
 
+    // makes hit effect
     private void SpawnHitEffect()
     {
         if (grappleHitEffect != null)
@@ -459,9 +392,8 @@ public class GrappleHook : MonoBehaviour
             Instantiate(grappleHitEffect, grapplePoint, Quaternion.identity);
         }
     }
-    #endregion
 
-    #region Audio
+    // play sound
     private void PlaySound(AudioClip clip)
     {
         if (audioSource != null && clip != null)
@@ -469,53 +401,32 @@ public class GrappleHook : MonoBehaviour
             audioSource.PlayOneShot(clip);
         }
     }
-    #endregion
 
-    #region Utility
+    // check if on ground
     private bool IsGrounded()
     {
-        // More comprehensive ground check
         return Physics2D.OverlapCircle(transform.position + Vector3.down * 0.6f, 0.4f, groundLayer);
     }
 
-    // Public methods for external systems
+    // public function to force release
     public void ForceReleaseGrapple()
     {
         ReleaseGrapple();
     }
 
+    // public function to check if can grapple
     public bool CanGrapple()
     {
         return !isGrappling && !isHookTraveling && (allowGrappleWhileGrounded || !IsGrounded());
     }
-    #endregion
 
-    #region Debug
+    // draw gizmos in editor
     private void OnDrawGizmosSelected()
     {
-        // Draw grapple range
         Gizmos.color = Color.yellow;
         if (hookOrigin != null)
         {
             Gizmos.DrawWireSphere(hookOrigin.position, maxGrappleDistance);
         }
-
-        // Draw current grapple line
-        if (isGrappling)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine(transform.position, grapplePoint);
-            Gizmos.DrawWireSphere(grapplePoint, 0.5f);
-        }
-
-        // Draw rope length limits
-        if (isGrappling)
-        {
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(grapplePoint, minRopeLength);
-            Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(grapplePoint, maxRopeLength);
-        }
     }
-    #endregion
 }

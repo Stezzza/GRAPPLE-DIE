@@ -7,18 +7,15 @@ public class PlayerHealth : MonoBehaviour
 {
     public static event Action OnPlayerDeath;
 
-    [Header("Health Settings")]
+    [Header("health settings")]
     public int maxHealth = 100;
     private int currentHealth;
 
-    [Header("Optional Death Effect")]
+    [Header("death effect")]
     public GameObject deathEffectPrefab;
 
-    [Header("End-Game Settings")]
-    [Tooltip("Name must match exactly and be in Build Settings")]
+    [Header("end game settings")]
     public string endGameSceneName = "EndGameScene";
-
-    [Tooltip("Delay (seconds) before loading end-game")]
     public float deathDelay = 0.3f;
 
     void Start()
@@ -29,7 +26,7 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(int amount)
     {
         currentHealth -= amount;
-        Debug.Log($"Player took {amount} damage, health now {currentHealth}/{maxHealth}");
+        Debug.Log("player took damage");
 
         if (currentHealth <= 0)
             StartCoroutine(DieRoutine());
@@ -40,19 +37,19 @@ public class PlayerHealth : MonoBehaviour
         if (deathEffectPrefab != null)
             Instantiate(deathEffectPrefab, transform.position, Quaternion.identity);
 
-        OnPlayerDeath?.Invoke();
-        Debug.Log("Player has died! Transitioning to end-game in " + deathDelay + "s");
+        OnPlayerDeath?.Invoke(); // tell other scripts the player died
+        Debug.Log("player died");
 
         yield return new WaitForSeconds(deathDelay);
 
-        // Final check: ensure scene name is valid
+        // load end scene
         if (Application.CanStreamedLevelBeLoaded(endGameSceneName))
         {
             SceneManager.LoadScene(endGameSceneName);
         }
         else
         {
-            Debug.LogError($"Cannot load scene '{endGameSceneName}'. Check Build Settings and spelling.");
+            Debug.LogError("cannot load scene " + endGameSceneName);
         }
 
         Destroy(gameObject);
